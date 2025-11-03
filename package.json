@@ -98,5 +98,8 @@
     "vite-plugin-pwa": "^1.1.0",
     "vitest": "^4.0.2",
     "workbox-window": "^7.3.0"
+  },
+  "overrides": {
+    "mdast-util-gfm-autolink-literal": "2.0.0"
   }
 }
