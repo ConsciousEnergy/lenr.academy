@@ -11,7 +11,16 @@ import ProportionInput from '../components/ProportionInput'
 import MaterialsCatalog from '../components/MaterialsCatalog'
 import { getAllElements } from '../services/queryService'
 import { createEqualProportions } from '../services/proportionService'
-import type { CascadeResults, Element, WeightedNuclide, ProportionFormat } from '../types'
+import { discoverCycles } from '../services/cycleDiscoveryService'
+import type {
+  CascadeResults,
+  Element,
+  WeightedNuclide,
+  ProportionFormat,
+  CycleDiscoveryParameters,
+  CycleDiscoveryResults,
+  DiscoveredCycle,
+} from '../types'
 
 export default function CascadesAll() {
   const { t } = useTranslation()
@@ -47,6 +56,20 @@ export default function CascadesAll() {
   const [weightedFuel, setWeightedFuel] = useState<WeightedNuclide[]>([])
   const [proportionFormat, setProportionFormat] = useState<ProportionFormat>('percentage')
   const [showMaterialsCatalog, setShowMaterialsCatalog] = useState(false)
+
+  // Cycle discovery state (Issue #92)
+  const [cycleDiscoveryParams, setCycleDiscoveryParams] = useState<CycleDiscoveryParameters>({
+    minFusionMeV: 1.0,
+    minTwoToTwoMeV: 1.0,
+    minFissionMeV: 1.0,
+    maxCycleDepth: 5,
+    includeFission: true,
+    maxCycles: 100,
+  })
+  const [cycleDiscoveryResults, setCycleDiscoveryResults] = useState<CycleDiscoveryResults | null>(null)
+  const [selectedCycle, setSelectedCycle] = useState<DiscoveredCycle | null>(null)
+  const [isCycleSearching, setIsCycleSearching] = useState(false)
+  const [activeResultsTab, setActiveResultsTab] = useState<'summary' | 'flow' | 'pathways' | 'network' | 'products'>('summary')
 
   // Load available elements and restore state when database is ready
   useEffect(() => {
@@ -292,6 +315,86 @@ export default function CascadesAll() {
     link.click()
     document.body.removeChild(link)
     URL.revokeObjectURL(url)
+  }
+
+  // Cycle discovery handlers (Issue #92)
+  const handleCycleDiscoverySearch = async () => {
+    if (!db) {
+      setError('Database not loaded')
+      return
+    }
+
+    setIsCycleSearching(true)
+    setError(null)
+    setSelectedCycle(null)
+
+    try {
+      const results = await discoverCycles(db, cycleDiscoveryParams)
+      setCycleDiscoveryResults(results)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error occurred'
+      setError(message)
+      console.error('Cycle discovery error:', err)
+    } finally {
+      setIsCycleSearching(false)
+    }
+  }
+
+  const handleViewCycle = (cycle: DiscoveredCycle) => {
+    setSelectedCycle(cycle)
+  }
+
+  const handleRunCycleSimulation = async (cycle: DiscoveredCycle) => {
+    // Pre-fill cascade simulation with cycle's fuel
+    setFuelNuclides(cycle.fuelNuclides)
+    setSelectedCycle(null) // Clear selected cycle to show results table again after simulation
+    
+    // Actually run the simulation automatically
+    if (!db) {
+      setError('Database not loaded yet. Please wait...')
+      return
+    }
+
+    setError(null)
+    setResults(null)
+
+    try {
+      // Validate fuel nuclides
+      if (cycle.fuelNuclides.length === 0) {
+        throw new Error('Cycle has no fuel nuclides')
+      }
+
+      // Export database to ArrayBuffer for worker
+      const dbBuffer = db.export().buffer
+
+      // Run cascade in worker
+      const cascadeResults = await runCascade({
+        fuelNuclides: cycle.fuelNuclides,
+        ...params,
+        // Include weighted fuel configuration when enabled
+        ...(useWeightedMode && weightedFuel.length > 0 ? {
+          weightedFuel,
+          useWeightedMode: true,
+        } : {}),
+      }, dbBuffer as ArrayBuffer)
+
+      setResults(cascadeResults)
+      
+      // Switch to summary tab to show results
+      setActiveResultsTab('summary')
+      
+      // Scroll to results section
+      setTimeout(() => {
+        const resultsElement = document.getElementById('cascade-results')
+        if (resultsElement) {
+          resultsElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+      }, 100)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error occurred'
+      setError(message)
+      console.error('Cascade simulation error:', err)
+    }
   }
 
   return (
@@ -583,7 +686,7 @@ export default function CascadesAll() {
 
       {/* Results Display */}
       {results && (
-        <div className="mt-6 space-y-6">
+        <div id="cascade-results" className="mt-6 space-y-6">
           {/* Completion Banner */}
           <div className="card p-6 bg-green-50 dark:bg-green-900/20">
             <div className="flex items-start gap-3">
@@ -639,7 +742,20 @@ export default function CascadesAll() {
 
           {/* Tabbed Results Interface */}
           {results.reactions.length > 0 ? (
-            <CascadeTabs results={results} fuelNuclides={fuelNuclides} />
+            <CascadeTabs
+              results={results}
+              fuelNuclides={fuelNuclides}
+              cycleDiscoveryParams={cycleDiscoveryParams}
+              cycleDiscoveryResults={cycleDiscoveryResults ?? undefined}
+              selectedCycle={selectedCycle}
+              onCycleDiscoveryParamsChange={setCycleDiscoveryParams}
+              onCycleDiscoverySearch={handleCycleDiscoverySearch}
+              onViewCycle={handleViewCycle}
+              onRunCycleSimulation={handleRunCycleSimulation}
+              isCycleSearching={isCycleSearching}
+              activeTab={activeResultsTab}
+              onTabChange={setActiveResultsTab}
+            />
           ) : (
             <div className="card p-6 bg-yellow-50 dark:bg-yellow-900/20">
               <div className="flex items-start gap-3">

@@ -484,3 +484,58 @@ export interface CascadePageStateV2 extends CascadePageState {
   // Extended results
   results?: CascadeResultsV2;
 }
+
+// ============================================================================
+// Cycle Discovery Types (Issue #92)
+// ============================================================================
+
+/**
+ * Cycle discovery search parameters
+ */
+export interface CycleDiscoveryParameters {
+  minFusionMeV: number;
+  minTwoToTwoMeV: number;
+  minFissionMeV?: number;  // Optional, for fission inclusion
+  maxCycleDepth: number;    // Maximum reactions in a cycle (3-10)
+  includeFission: boolean; // Whether to include fission reactions
+  elementFilters?: {
+    abundantOnly?: boolean;
+    excludeRadioactive?: boolean;
+    allowedElements?: string[];
+  };
+  maxCycles: number;       // Maximum cycles to return (default: 100)
+}
+
+/**
+ * A single reaction within a discovered cycle
+ */
+export interface CycleReaction {
+  type: 'fusion' | 'twotwo' | 'fission';
+  inputs: string[];        // Nuclide IDs (e.g., ["H-1", "Li-7"])
+  outputs: string[];       // Product nuclide IDs
+  MeV: number;             // Energy released/absorbed
+  isFeedback: boolean;     // Does this reaction use a product from earlier in cycle?
+}
+
+/**
+ * A discovered feedback cycle
+ */
+export interface DiscoveredCycle {
+  id: string;              // Unique cycle identifier
+  fuelNuclides: string[];  // Starting fuel nuclides
+  reactions: CycleReaction[]; // Reactions in the cycle
+  totalEnergy: number;     // Sum of MeV values
+  feedbackRatio: number;   // Percentage of products that react with fuel (0-100)
+  cycleDepth: number;       // Number of reactions
+  abundanceScore: number;  // Natural abundance score (0-100)
+  stabilityScore: number;  // Stability score (fewer rare isotopes = higher)
+}
+
+/**
+ * Cycle discovery results
+ */
+export interface CycleDiscoveryResults {
+  cycles: DiscoveredCycle[];
+  executionTime: number;
+  totalCyclesFound: number; // May be > cycles.length if limited
+}

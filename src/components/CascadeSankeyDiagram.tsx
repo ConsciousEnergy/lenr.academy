@@ -79,15 +79,22 @@ function pathwaysToSankeyData(
     })
   );
 
+  // Filter pathways to only include those that start from fuel nuclides
+  // This ensures the diagram only shows reactions originating from the initial fuel mixture
+  const fuelPathways = pathways.filter((pathway) => {
+    // Include pathway if at least one input is a fuel nuclide
+    return pathway.inputs.some((input) => normalizedFuel.has(input));
+  });
+
   // Track which nodes have outgoing edges (to identify final products)
   const hasOutgoingEdges = new Set<string>();
-  pathways.forEach((pathway) => {
+  fuelPathways.forEach((pathway) => {
     pathway.inputs.forEach((input: string) => hasOutgoingEdges.add(input));
   });
 
   // Sort pathways to minimize crossings in Sankey diagram
   // Group by: 1) output element/mass, 2) input element/mass
-  const sortedPathways = [...pathways].sort((a, b) => {
+  const sortedPathways = [...fuelPathways].sort((a, b) => {
     // Parse first output of each pathway
     const aOut = parseNuclide(a.outputs[0]);
     const bOut = parseNuclide(b.outputs[0]);

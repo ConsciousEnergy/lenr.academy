@@ -1,15 +1,31 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { BarChart3, Network, Table2, TrendingUp, Info } from 'lucide-react';
+import { BarChart3, Network, Table2, TrendingUp, Info, RefreshCw, ArrowLeft } from 'lucide-react';
 import type { CascadeResults } from '../types';
 import { analyzePathways, getPathwayStats } from '../services/pathwayAnalyzer';
 import CascadeSankeyDiagram from './CascadeSankeyDiagram';
 import PathwayBrowserTable from './PathwayBrowserTable';
 import CascadeNetworkDiagram from './CascadeNetworkDiagram';
+import CycleDiscoverySearch from './CycleDiscoverySearch';
+import CycleResultsTable from './CycleResultsTable';
+import CycleVisualization from './CycleVisualization';
+import type { CycleDiscoveryParameters, CycleDiscoveryResults, DiscoveredCycle } from '../types';
 
 interface CascadeTabsProps {
   results: CascadeResults;
   fuelNuclides?: string[];  // Original fuel nuclides for color coding
+  // Cycle discovery props
+  cycleDiscoveryParams?: CycleDiscoveryParameters;
+  cycleDiscoveryResults?: CycleDiscoveryResults;
+  selectedCycle?: DiscoveredCycle | null;
+  onCycleDiscoveryParamsChange?: (params: CycleDiscoveryParameters) => void;
+  onCycleDiscoverySearch?: () => void;
+  onViewCycle?: (cycle: DiscoveredCycle) => void;
+  onRunCycleSimulation?: (cycle: DiscoveredCycle) => void;
+  isCycleSearching?: boolean;
+  // Allow external control of active tab (for switching to results after simulation)
+  activeTab?: TabId;
+  onTabChange?: (tab: TabId) => void;
 }
 
 type TabId = 'summary' | 'flow' | 'pathways' | 'network' | 'products';
@@ -24,9 +40,40 @@ type TabId = 'summary' | 'flow' | 'pathways' | 'network' | 'products';
  * - Network: Hierarchical network diagram (optional)
  * - Products: Bar chart of top products
  */
-export default function CascadeTabs({ results, fuelNuclides = [] }: CascadeTabsProps) {
+export default function CascadeTabs({
+  results,
+  fuelNuclides = [],
+  cycleDiscoveryParams,
+  cycleDiscoveryResults,
+  selectedCycle,
+  onCycleDiscoveryParamsChange,
+  onCycleDiscoverySearch,
+  onViewCycle,
+  onRunCycleSimulation,
+  isCycleSearching = false,
+  activeTab: externalActiveTab,
+  onTabChange,
+}: CascadeTabsProps) {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<TabId>('summary');
+  const [internalActiveTab, setInternalActiveTab] = useState<TabId>('summary');
+  const [viewMode, setViewMode] = useState<'cascade' | 'cycles'>('cascade');
+  
+  // Use external tab if provided, otherwise use internal state
+  const activeTab = externalActiveTab ?? internalActiveTab;
+  const setActiveTab = (tab: TabId) => {
+    if (onTabChange) {
+      onTabChange(tab);
+    } else {
+      setInternalActiveTab(tab);
+    }
+  };
+
+  // Reset view mode when switching tabs away from flow
+  useEffect(() => {
+    if (activeTab !== 'flow') {
+      setViewMode('cascade');
+    }
+  }, [activeTab]);
 
   // Analyze pathways for all tabs
   const pathways = useMemo(
@@ -43,6 +90,7 @@ export default function CascadeTabs({ results, fuelNuclides = [] }: CascadeTabsP
     { id: 'network', labelKey: 'cascades.tabNetwork', icon: <Network className="w-4 h-4" /> },
     { id: 'products', labelKey: 'cascades.tabProducts', icon: <BarChart3 className="w-4 h-4" /> },
   ];
+
 
   return (
     <div className="space-y-4">
@@ -141,8 +189,93 @@ export default function CascadeTabs({ results, fuelNuclides = [] }: CascadeTabsP
         )}
 
         {activeTab === 'flow' && (
-          <div className="card p-6">
-            <CascadeSankeyDiagram pathways={pathways} fuelNuclides={fuelNuclides} />
+          <div className="space-y-6">
+            {/* View Mode Toggle: Cascade Results vs Cycle Discovery */}
+            {cycleDiscoveryParams && onCycleDiscoveryParamsChange && onCycleDiscoverySearch && (
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setViewMode('cascade')}
+                    className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                      viewMode === 'cascade'
+                        ? 'bg-primary-600 text-white'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    <TrendingUp className="w-4 h-4" />
+                    {t('cascades.cycleDiscovery.cascadeResults', 'Cascade Results')}
+                  </button>
+                  <button
+                    onClick={() => setViewMode('cycles')}
+                    className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                      viewMode === 'cycles'
+                        ? 'bg-primary-600 text-white'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    {t('cascades.cycleDiscovery.cycleDiscovery', 'Cycle Discovery')}
+                  </button>
+                </div>
+                {viewMode === 'cycles' && (
+                  <button
+                    onClick={() => setViewMode('cascade')}
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    {t('cascades.cycleDiscovery.backToCascade', 'Back to Cascade')}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Cascade Results View */}
+            {(!cycleDiscoveryParams || viewMode === 'cascade') && (
+              <div className="card p-6">
+                <CascadeSankeyDiagram pathways={pathways} fuelNuclides={fuelNuclides} />
+              </div>
+            )}
+
+            {/* Cycle Discovery Section */}
+            {cycleDiscoveryParams && onCycleDiscoveryParamsChange && onCycleDiscoverySearch && viewMode === 'cycles' && (
+              <div className="space-y-6">
+                <div className="card p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                    {t('cascades.cycleDiscovery.title', 'Cycle Discovery')}
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                    {t(
+                      'cascades.cycleDiscovery.description',
+                      'Search for fuel combinations that form closed-loop reaction cycles (feedback loops).'
+                    )}
+                  </p>
+
+                  <CycleDiscoverySearch
+                    params={cycleDiscoveryParams}
+                    onParamsChange={onCycleDiscoveryParamsChange}
+                    onSearch={onCycleDiscoverySearch}
+                    isSearching={isCycleSearching}
+                  />
+                </div>
+
+                {selectedCycle ? (
+                  <CycleVisualization
+                    cycle={selectedCycle}
+                    onRunSimulation={() => onRunCycleSimulation?.(selectedCycle)}
+                  />
+                ) : cycleDiscoveryResults ? (
+                  <CycleResultsTable
+                    cycles={cycleDiscoveryResults.cycles}
+                    onViewCycle={onViewCycle}
+                    onRunSimulation={onRunCycleSimulation}
+                  />
+                ) : (
+                  <div className="card p-6 bg-gray-50 dark:bg-gray-800/50 text-center text-gray-500 dark:text-gray-400">
+                    {t('cascades.cycleDiscovery.searchPrompt', 'Click "Search for Cycles" to discover feedback cycles.')}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -205,6 +338,7 @@ export default function CascadeTabs({ results, fuelNuclides = [] }: CascadeTabsP
             )}
           </div>
         )}
+
       </div>
     </div>
   );
