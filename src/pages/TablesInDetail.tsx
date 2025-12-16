@@ -1,47 +1,61 @@
+import { useTranslation } from 'react-i18next'
+
 export default function TablesInDetail() {
+  const { t } = useTranslation()
+
   const tables = [
     {
       name: 'FusionAll',
-      description: 'All exothermic fusion reactions including neutrino variants',
+      descriptionKey: 'tables.fusionAllDescription',
       fields: ['id', 'E1', 'Z1', 'A1', 'E', 'Z', 'A', 'MeV', 'neutrino', 'nBorF1', 'aBorF1', 'nBorF', 'aBorF', 'BEin']
     },
     {
       name: 'FissionAll',
-      description: 'All exothermic fission reactions including neutrino variants',
+      descriptionKey: 'tables.fissionAllDescription',
       fields: ['id', 'E', 'Z', 'A', 'E1', 'Z1', 'A1', 'E2', 'Z2', 'A2', 'MeV', 'neutrino', 'nBorF', 'aBorF', 'BEin']
     },
     {
       name: 'TwoToTwoAll',
-      description: 'All exothermic 2-2 transmutation reactions',
+      descriptionKey: 'tables.twoToTwoAllDescription',
       fields: ['id', 'E1', 'Z1', 'A1', 'E2', 'Z2', 'A2', 'E3', 'Z3', 'A3', 'E4', 'Z4', 'A4', 'MeV', 'neutrino', 'BEin']
     },
     {
       name: 'NuclidesPlus',
-      description: 'Extended table of 324 stable and long-lived nuclides',
+      descriptionKey: 'tables.nuclidesPlusDescription',
       fields: ['id', 'Z', 'A', 'E', 'BE', 'AMU', 'nBorF', 'aBorF', 'LHL']
     },
     {
       name: 'ElementsPlus',
-      description: 'Comprehensive element properties from periodic table',
+      descriptionKey: 'tables.elementsPlusDescription',
       fields: ['Z', 'E', 'EName', 'Period', 'Group', 'AWeight', 'Melting', 'Boiling', 'STPDensity', 'ThermConduct']
     },
+  ]
+
+  const fieldDefinitions = [
+    { field: 'tables.fieldZ', description: 'tables.fieldZDescription' },
+    { field: 'tables.fieldA', description: 'tables.fieldADescription' },
+    { field: 'tables.fieldE', description: 'tables.fieldEDescription' },
+    { field: 'tables.fieldMeV', description: 'tables.fieldMeVDescription' },
+    { field: 'tables.fieldBE', description: 'tables.fieldBEDescription' },
+    { field: 'tables.fieldBorF', description: 'tables.fieldBorFDescription' },
+    { field: 'tables.fieldNeutrino', description: 'tables.fieldNeutrinoDescription' },
   ]
 
   return (
     <div className="max-w-6xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Tables in Detail</h1>
-        <p className="text-gray-600 dark:text-gray-400">Database schema and field descriptions for all Nanosoft tables</p>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{t('tables.title')}</h1>
+        <p className="text-gray-600 dark:text-gray-400">{t('tables.description')}</p>
       </div>
 
       <div className="space-y-4">
         {tables.map(table => (
           <div key={table.name} className="card p-6">
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">{table.name}</h3>
-            <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">{table.description}</p>
+            <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">{t(table.descriptionKey)}</p>
 
             <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded">
-              <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fields:</h4>
+              <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('tables.fields')}:</h4>
               <div className="flex flex-wrap gap-2">
                 {table.fields.map(field => (
                   <code key={field} className="px-2 py-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded text-xs font-mono text-gray-800 dark:text-gray-200">
@@ -55,36 +69,14 @@ export default function TablesInDetail() {
       </div>
 
       <div className="card p-6 mt-6 bg-blue-50 dark:bg-blue-900/30">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Field Definitions</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">{t('tables.fieldDefinitions')}</h3>
         <dl className="space-y-2 text-sm">
-          <div>
-            <dt className="font-medium text-gray-900 dark:text-gray-100">Z</dt>
-            <dd className="text-gray-600 dark:text-gray-400">Atomic number (number of protons)</dd>
-          </div>
-          <div>
-            <dt className="font-medium text-gray-900 dark:text-gray-100">A</dt>
-            <dd className="text-gray-600 dark:text-gray-400">Mass number (protons + neutrons)</dd>
-          </div>
-          <div>
-            <dt className="font-medium text-gray-900 dark:text-gray-100">E</dt>
-            <dd className="text-gray-600 dark:text-gray-400">Element symbol</dd>
-          </div>
-          <div>
-            <dt className="font-medium text-gray-900 dark:text-gray-100">MeV</dt>
-            <dd className="text-gray-600 dark:text-gray-400">Energy released in reaction (Mega electron Volts)</dd>
-          </div>
-          <div>
-            <dt className="font-medium text-gray-900 dark:text-gray-100">BE</dt>
-            <dd className="text-gray-600 dark:text-gray-400">Binding Energy in MeV</dd>
-          </div>
-          <div>
-            <dt className="font-medium text-gray-900 dark:text-gray-100">nBorF / aBorF</dt>
-            <dd className="text-gray-600 dark:text-gray-400">Nuclear/Atomic Boson (b) or Fermion (f) classification</dd>
-          </div>
-          <div>
-            <dt className="font-medium text-gray-900 dark:text-gray-100">neutrino</dt>
-            <dd className="text-gray-600 dark:text-gray-400">Neutrino involvement: none, left, or right</dd>
-          </div>
+          {fieldDefinitions.map(({ field, description }) => (
+            <div key={field}>
+              <dt className="font-medium text-gray-900 dark:text-gray-100">{t(field)}</dt>
+              <dd className="text-gray-600 dark:text-gray-400">{t(description)}</dd>
+            </div>
+          ))}
         </dl>
       </div>
     </div>

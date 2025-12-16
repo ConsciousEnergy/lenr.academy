@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { Play, BookOpen, Download, Loader, AlertCircle } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useDatabase } from '../contexts/DatabaseContext'
 import DatabaseLoadingCard from '../components/DatabaseLoadingCard'
 
 export default function AllTables() {
+  const { t } = useTranslation()
   const { db, isLoading: dbLoading, error: dbError, downloadProgress } = useDatabase()
   const [sqlQuery, setSqlQuery] = useState('SELECT * FROM FusionAll WHERE MeV > 10 ORDER BY MeV DESC LIMIT 100')
   const [results, setResults] = useState<any>(null)
@@ -74,23 +76,23 @@ export default function AllTables() {
   return (
     <div className="max-w-7xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">All Tables Query Tool</h1>
-        <p className="text-gray-600 dark:text-gray-400">Execute custom SQL queries across all reaction and property tables</p>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{t('allTables.title')}</h1>
+        <p className="text-gray-600 dark:text-gray-400">{t('allTables.description')}</p>
       </div>
 
       <div className="card p-6 mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">SQL Query Editor</h2>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t('allTables.sqlEditor')}</h2>
 
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Enter SQL Query
+            {t('allTables.enterSqlQuery')}
           </label>
           <textarea
             className="input font-mono text-sm"
             rows={6}
             value={sqlQuery}
             onChange={(e) => setSqlQuery(e.target.value)}
-            placeholder="SELECT * FROM TableName WHERE ..."
+            placeholder={t('allTables.queryPlaceholder')}
           />
         </div>
 
@@ -103,12 +105,12 @@ export default function AllTables() {
             {isExecuting ? (
               <>
                 <Loader className="w-4 h-4 mr-2 inline animate-spin" />
-                Executing...
+                {t('allTables.executing')}
               </>
             ) : (
               <>
                 <Play className="w-4 h-4 mr-2 inline" />
-                Execute Query
+                {t('allTables.executeQuery')}
               </>
             )}
           </button>
@@ -120,7 +122,7 @@ export default function AllTables() {
             }}
             className="btn btn-secondary px-6 py-2"
           >
-            Clear
+            {t('allTables.clear')}
           </button>
         </div>
       </div>
@@ -130,7 +132,7 @@ export default function AllTables() {
           <div className="flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
             <div>
-              <h3 className="font-semibold text-red-900 dark:text-red-200 mb-1">Query Error</h3>
+              <h3 className="font-semibold text-red-900 dark:text-red-200 mb-1">{t('allTables.queryError')}</h3>
               <p className="text-sm text-red-700 dark:text-red-300 font-mono">{error}</p>
             </div>
           </div>
@@ -142,10 +144,10 @@ export default function AllTables() {
           <div className="flex justify-between items-center mb-4">
             <div>
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                Query Results: {results[0].values.length} rows
+                {t('allTables.queryResults', { count: results[0].values.length })}
               </h2>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                Executed in {queryTime.toFixed(2)}ms
+                {t('allTables.executedIn', { time: queryTime.toFixed(2) })}
               </p>
             </div>
             <button
@@ -153,7 +155,7 @@ export default function AllTables() {
               className="btn btn-secondary px-4 py-2 text-sm"
             >
               <Download className="w-4 h-4 mr-2 inline" />
-              Export CSV
+              {t('allTables.exportCsv')}
             </button>
           </div>
 
@@ -172,7 +174,7 @@ export default function AllTables() {
                     {row.map((cell, cellIdx) => (
                       <td key={cellIdx}>
                         {cell === null ? (
-                          <span className="text-gray-400 dark:text-gray-500 italic">null</span>
+                          <span className="text-gray-400 dark:text-gray-500 italic">{t('allTables.nullValue')}</span>
                         ) : typeof cell === 'number' ? (
                           cell.toFixed(cell % 1 === 0 ? 0 : 2)
                         ) : (
@@ -190,14 +192,14 @@ export default function AllTables() {
 
       {results && results.length === 0 && !error && (
         <div className="card p-6 mb-6 bg-gray-50 dark:bg-gray-800">
-          <p className="text-gray-600 dark:text-gray-400">Query executed successfully but returned no results.</p>
+          <p className="text-gray-600 dark:text-gray-400">{t('allTables.noResults')}</p>
         </div>
       )}
 
       <div className="card p-6 mb-6">
         <div className="flex items-center gap-2 mb-4">
           <BookOpen className="w-5 h-5 text-primary-600" />
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Example Queries</h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('allTables.exampleQueries')}</h3>
         </div>
         <div className="space-y-2">
           {exampleQueries.map((query, idx) => (
@@ -214,39 +216,49 @@ export default function AllTables() {
 
       <div className="grid md:grid-cols-2 gap-6">
         <div className="card p-6 bg-blue-50 dark:bg-blue-900/30">
-          <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Available Tables</h3>
+          <h3 className="font-semibold text-gray-900 dark:text-white mb-3">{t('allTables.availableTables')}</h3>
           <ul className="text-sm text-gray-700 dark:text-gray-300 space-y-2">
             <li>
               <code className="bg-white dark:bg-gray-700 px-2 py-1 rounded font-semibold">FusionAll</code>
-              <span className="text-gray-600 dark:text-gray-400 ml-2">- Fusion reactions (E1 + E → E)</span>
+              <span className="text-gray-600 dark:text-gray-400 ml-2">- {t('allTables.fusionAllShort')}</span>
             </li>
             <li>
               <code className="bg-white dark:bg-gray-700 px-2 py-1 rounded font-semibold">FissionAll</code>
-              <span className="text-gray-600 dark:text-gray-400 ml-2">- Fission reactions (E → E1 + E2)</span>
+              <span className="text-gray-600 dark:text-gray-400 ml-2">- {t('allTables.fissionAllShort')}</span>
             </li>
             <li>
               <code className="bg-white dark:bg-gray-700 px-2 py-1 rounded font-semibold">TwoToTwoAll</code>
-              <span className="text-gray-600 dark:text-gray-400 ml-2">- 2-to-2 reactions (E1 + E2 → E3 + E4)</span>
+              <span className="text-gray-600 dark:text-gray-400 ml-2">- {t('allTables.twoToTwoAllShort')}</span>
             </li>
             <li>
               <code className="bg-white dark:bg-gray-700 px-2 py-1 rounded font-semibold">NuclidesPlus</code>
-              <span className="text-gray-600 dark:text-gray-400 ml-2">- Nuclear isotope properties</span>
+              <span className="text-gray-600 dark:text-gray-400 ml-2">- {t('allTables.nuclidesPlusShort')}</span>
             </li>
             <li>
               <code className="bg-white dark:bg-gray-700 px-2 py-1 rounded font-semibold">ElementsPlus</code>
-              <span className="text-gray-600 dark:text-gray-400 ml-2">- Chemical element properties</span>
+              <span className="text-gray-600 dark:text-gray-400 ml-2">- {t('allTables.elementsPlusShort')}</span>
             </li>
           </ul>
         </div>
 
         <div className="card p-6 bg-yellow-50 dark:bg-yellow-900/30">
-          <h3 className="font-semibold text-gray-900 dark:text-white mb-3">SQL Tips</h3>
+          <h3 className="font-semibold text-gray-900 dark:text-white mb-3">{t('allTables.sqlTips')}</h3>
           <ul className="text-sm text-gray-700 dark:text-gray-300 space-y-2 list-disc list-inside">
-            <li>Use <code className="bg-white dark:bg-gray-700 px-1 rounded">IN</code> for multiple values: <code className="bg-white dark:bg-gray-700 px-1 rounded">E IN ('H','D','Li')</code></li>
-            <li>Always include <code className="bg-white dark:bg-gray-700 px-1 rounded">LIMIT</code> for large queries (max 1000)</li>
-            <li>Common fields: <code className="bg-white dark:bg-gray-700 px-1 rounded">E, Z, A, MeV, neutrino</code></li>
-            <li>Use <code className="bg-white dark:bg-gray-700 px-1 rounded">GROUP BY</code> for aggregations</li>
-            <li>String comparisons use double quotes: <code className="bg-white dark:bg-gray-700 px-1 rounded">"H"</code></li>
+            <li>
+              {t('allTables.tipInText')} <code className="bg-white dark:bg-gray-700 px-1 rounded">{t('allTables.tipInKeyword')}</code> {t('allTables.tipInExample')} <code className="bg-white dark:bg-gray-700 px-1 rounded">{t('allTables.tipInCode')}</code>
+            </li>
+            <li>
+              {t('allTables.tipLimitText')} <code className="bg-white dark:bg-gray-700 px-1 rounded">{t('allTables.tipLimitKeyword')}</code> {t('allTables.tipLimitRest')}
+            </li>
+            <li>
+              {t('allTables.tipCommonFieldsText')} <code className="bg-white dark:bg-gray-700 px-1 rounded">{t('allTables.tipCommonFieldsCode')}</code>
+            </li>
+            <li>
+              {t('allTables.tipGroupByText')} <code className="bg-white dark:bg-gray-700 px-1 rounded">{t('allTables.tipGroupByKeyword')}</code> {t('allTables.tipGroupByRest')}
+            </li>
+            <li>
+              {t('allTables.tipStringsText')} <code className="bg-white dark:bg-gray-700 px-1 rounded">{t('allTables.tipStringsCode')}</code>
+            </li>
           </ul>
         </div>
       </div>
